@@ -439,7 +439,8 @@ if [ "$BUILD_FAST" = "y" ]; then
 fi
 
 # init openwrt config
-rm -rf tmp/*
+rm -rf tmp
+mkdir -p tmp
 if [ "$BUILD" = "n" ]; then
     exit 0
 else
