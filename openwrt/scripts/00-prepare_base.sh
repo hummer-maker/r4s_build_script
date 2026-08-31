@@ -77,6 +77,7 @@ git clone https://$github/sbwml/package_kernel_r8168 package/kernel/r8168
 git clone https://$github/sbwml/package_kernel_r8152 package/kernel/r8152
 git clone https://$github/sbwml/package_kernel_r8101 package/kernel/r8101
 git clone https://$github/sbwml/package_kernel_r8125 package/kernel/r8125
+sed -i 's/#define R8125_MIN_MSIX_VEC_8125B   22/#define R8125_MIN_MSIX_VEC_8125B   4/' package/kernel/r8125/src/r8125.h
 git clone https://$github/sbwml/package_kernel_r8126 package/kernel/r8126
 git clone https://$github/sbwml/package_kernel_r8127 package/kernel/r8127
 # Realtek Wireless driver - RTL8822CS & RTL8852AU
