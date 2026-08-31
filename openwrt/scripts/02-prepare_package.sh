@@ -115,6 +115,10 @@ git clone https://$github/sbwml/package_new_nethogs package/new/nethogs
 rm -rf feeds/packages/net/{xray-core,v2ray-core,v2ray-geodata,sing-box}
 git clone https://$github/sbwml/openwrt_helloworld package/new/helloworld -b v5
 
+pushd package/new/helloworld
+curl -s https://raw.githubusercontent.com/sbwml/openwrt_helloworld/v5/patch-luci-app-ssr-plus.patch | patch -p1
+popd
+
 # openlist
 git clone https://$github/sbwml/luci-app-openlist2 package/new/openlist --depth=1
 
