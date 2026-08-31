@@ -61,6 +61,13 @@ jobs:
         if: failure()
         working-directory: /builder/openwrt
         run: |
+          echo "===== SELECTED TARGET ====="
+          grep -E '^CONFIG_TARGET_(rockchip|mediatek)|^CONFIG_TARGET_BOARD|^CONFIG_TARGET_SUBTARGET|^CONFIG_TARGET_PROFILE' .config || true
+
+          echo "===== ROCKCHIP KERNEL ====="
+          grep -n "KERNEL_PATCHVER" target/linux/rockchip/Makefile || true
+
+          echo "===== TARGET LINUX BUILD ====="
           make target/linux/compile -j1 V=s
 
       - name: Verify RSS patch
