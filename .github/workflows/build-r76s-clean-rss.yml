@@ -50,6 +50,25 @@ jobs:
             u-boot-tools \
             ccache
 
+      - name: Verify build dependencies
+        run: |
+          echo "===== PYTHON ====="
+          python3 --version
+
+          echo "===== PYELFTOOLS ====="
+          python3 -c "import elftools; print('pyelftools OK')"
+
+          echo "===== REQUIRED TOOLS ====="
+          for cmd in git gcc g++ make flex bison swig rsync unzip wget xz zstd; do
+            command -v "$cmd" >/dev/null || {
+              echo "ERROR: $cmd is missing"
+              exit 1
+            }
+            echo "$cmd OK"
+          done
+
+          echo "Build dependency check PASSED"
+
       - name: Clone pinned OpenWrt
         run: |
           git clone https://github.com/openwrt/openwrt.git openwrt
