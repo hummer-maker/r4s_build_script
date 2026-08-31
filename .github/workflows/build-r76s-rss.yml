@@ -44,6 +44,19 @@ jobs:
 
           bash r4s_build_script/openwrt/build.sh rc2 nanopi-r76s
 
+      - name: Debug Kconfig dependencies
+        if: failure()
+        working-directory: /builder/openwrt
+        run: |
+          echo "===== mihomo-alpha ====="
+          grep -n -A25 -B15 "PACKAGE_mihomo-alpha" tmp/.config-package.in || true
+
+          echo "===== mihomo-meta ====="
+          grep -n -A25 -B15 "PACKAGE_mihomo-meta" tmp/.config-package.in || true
+
+          echo "===== ssr-plus ====="
+          grep -n -A25 -B15 "PACKAGE_luci-app-ssr-plus" tmp/.config-package.in || true
+
       - name: Verify RSS patch
         working-directory: /builder/openwrt
         run: |
