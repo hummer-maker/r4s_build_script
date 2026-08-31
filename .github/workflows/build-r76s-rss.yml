@@ -57,6 +57,12 @@ jobs:
           echo "===== ssr-plus ====="
           grep -n -A25 -B15 "PACKAGE_luci-app-ssr-plus" tmp/.config-package.in || true
 
+      - name: Debug target linux
+        if: failure()
+        working-directory: /builder/openwrt
+        run: |
+          make target/linux/compile -j1 V=s
+
       - name: Verify RSS patch
         working-directory: /builder/openwrt
         run: |
