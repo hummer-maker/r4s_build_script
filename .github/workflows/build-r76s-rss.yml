@@ -1,0 +1,59 @@
+name: Build R76S Standard RSS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout build script
+        uses: actions/checkout@v4
+
+      - name: Free disk space
+        uses: sbwml/actions@free-disk
+
+        with:
+          build-mount-path: /builder
+
+      - name: Build System Setup
+        uses: sbwml/actions@openwrt-build-setup
+
+      - name: Install LLVM
+        uses: sbwml/actions@install-llvm
+
+      - name: Build R76S Standard
+        working-directory: /builder
+        env:
+          git_name: private
+        run: |
+          export KERNEL_CLANG_LTO=y
+          export BUILD_FAST=y
+          export ENABLE_CCACHE=y
+          export ENABLE_BPF=y
+          export ENABLE_LTO=y
+          export ENABLE_OTA=y
+          export ENABLE_LRNG=y
+          export STD_BUILD=y
+          export USE_GCC16=y
+          export ENABLE_MOLD=y
+
+          mkdir -p r4s_build_script
+          cp -a "$GITHUB_WORKSPACE/openwrt" r4s_build_script/
+
+          bash r4s_build_script/openwrt/build.sh rc2 nanopi-r76s
+
+      - name: Verify RSS patch
+        working-directory: /builder/openwrt
+        run: |
+          grep -n "R8125_MIN_MSIX_VEC_8125B" package/kernel/r8125/src/r8125.h
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: nanopi-r76s-standard-rss
+          path: |
+            /builder/openwrt/bin/targets/rockchip/*/*.img.gz
+            /builder/openwrt/bin/targets/rockchip/*/*.manifest
+            /builder/openwrt/bin/targets/rockchip/*/config.buildinfo
