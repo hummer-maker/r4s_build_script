@@ -115,8 +115,19 @@ git clone https://$github/sbwml/package_new_nethogs package/new/nethogs
 rm -rf feeds/packages/net/{xray-core,v2ray-core,v2ray-geodata,sing-box}
 git clone https://$github/sbwml/openwrt_helloworld package/new/helloworld -b v5
 
+# OpenWrt 25.12 Kconfig recursive dependency workaround
 pushd package/new/helloworld
-curl -s https://raw.githubusercontent.com/sbwml/openwrt_helloworld/v5/patch-luci-app-ssr-plus.patch | patch -p1
+
+# luci-app-ssr-plus:
+# remove the PACKAGE_luci-app-ssr-plus wrapper that creates
+# a parent <-> child Kconfig dependency cycle
+patch -R -p1 < patch-luci-app-ssr-plus.patch
+
+# mihomo:
+# keep mihomo-meta -> mihomo-alpha conflict, but remove the reverse
+# conflict so Kconfig does not create a two-way dependency
+sed -i '/^[[:space:]]*CONFLICTS:=mihomo-meta[[:space:]]*$/d' mihomo-alpha/Makefile
+
 popd
 
 # openlist
