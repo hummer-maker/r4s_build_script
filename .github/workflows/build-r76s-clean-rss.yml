@@ -79,6 +79,95 @@ jobs:
           echo "===== OPENWRT COMMIT ====="
           git rev-parse HEAD
 
+      - name: Use NanoPi R76S board-specific U-Boot
+        working-directory: openwrt
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          # -----------------------------------------
+          # 1. Add dedicated NanoPi R76S U-Boot target
+          # -----------------------------------------
+          path = Path("package/boot/uboot-rockchip/Makefile")
+          text = path.read_text()
+
+          if "PKG_VERSION:=2026.07" not in text:
+              raise SystemExit("ERROR: expected U-Boot 2026.07 was not found")
+
+          if "define U-Boot/nanopi-r76s-rk3576" not in text:
+              start = text.index("define U-Boot/generic-rk3576")
+              end = text.index("endef", start) + len("endef")
+
+              generic_block = text[start:end]
+
+              r76s_block = generic_block.replace(
+                  "define U-Boot/generic-rk3576",
+                  "define U-Boot/nanopi-r76s-rk3576"
+              ).replace(
+                  "NAME:=Generic RK3576",
+                  "NAME:=NanoPi R76S"
+              )
+
+              text = text[:end] + "\n\n" + r76s_block + text[end:]
+
+          if "  nanopi-r76s-rk3576 \\\n" not in text:
+              marker = "  generic-rk3576 \\\n"
+
+              if marker not in text:
+                  raise SystemExit("ERROR: generic-rk3576 UBOOT_TARGETS entry not found")
+
+              text = text.replace(
+                  marker,
+                  marker + "  nanopi-r76s-rk3576 \\\n",
+                  1
+              )
+
+          path.write_text(text)
+
+          # -----------------------------------------
+          # 2. Make NanoPi R76S use that U-Boot
+          # -----------------------------------------
+          path = Path("target/linux/rockchip/image/armv8.mk")
+          text = path.read_text()
+
+          start = text.index("define Device/friendlyarm_nanopi-r76s")
+          end = text.index("endef", start)
+
+          block = text[start:end]
+
+          old = "UBOOT_DEVICE_NAME := generic-rk3576"
+          new = "UBOOT_DEVICE_NAME := nanopi-r76s-rk3576"
+
+          if old not in block:
+              raise SystemExit(
+                  "ERROR: generic-rk3576 was not found in NanoPi R76S block"
+              )
+
+          block = block.replace(old, new)
+
+          text = text[:start] + block + text[end:]
+          path.write_text(text)
+
+          # -----------------------------------------
+          # 3. Show result
+          # -----------------------------------------
+          print("===== R76S U-BOOT TARGET =====")
+
+          text = Path("package/boot/uboot-rockchip/Makefile").read_text()
+          start = text.index("define U-Boot/nanopi-r76s-rk3576")
+          end = text.index("endef", start) + len("endef")
+          print(text[start:end])
+
+          print("===== R76S DEVICE =====")
+
+          text = Path("target/linux/rockchip/image/armv8.mk").read_text()
+          start = text.index("define Device/friendlyarm_nanopi-r76s")
+          end = text.index("endef", start) + len("endef")
+          print(text[start:end])
+
+          print("NanoPi R76S board-specific U-Boot patch PASSED")
+          PY
+
       - name: Update feeds
         working-directory: openwrt
         run: |
@@ -154,6 +243,37 @@ jobs:
 
           make defconfig
 
+      - name: Pre-flight R76S U-Boot check
+        working-directory: openwrt
+        run: |
+          echo "===== U-BOOT PACKAGE ====="
+
+          grep -A6 \
+            'define U-Boot/nanopi-r76s-rk3576' \
+            package/boot/uboot-rockchip/Makefile
+
+          echo "===== R76S IMAGE CONFIG ====="
+
+          grep -A12 \
+            'define Device/friendlyarm_nanopi-r76s' \
+            target/linux/rockchip/image/armv8.mk
+
+          grep -q \
+            'UBOOT_DEVICE_NAME := nanopi-r76s-rk3576' \
+            target/linux/rockchip/image/armv8.mk
+
+          echo "===== GENERATED OPENWRT CONFIG ====="
+
+          grep -E \
+            'CONFIG_PACKAGE_u-boot-(nanopi-r76s-rk3576|generic-rk3576)' \
+            .config || true
+
+          grep -qx \
+            'CONFIG_PACKAGE_u-boot-nanopi-r76s-rk3576=y' \
+            .config
+
+          echo "R76S U-Boot pre-flight check PASSED"
+
       - name: Pre-flight target check
         working-directory: openwrt
         run: |
@@ -179,6 +299,42 @@ jobs:
           fi
 
           echo "Pre-flight target check PASSED"
+
+      - name: Build and verify R76S U-Boot
+        working-directory: openwrt
+        run: |
+          make package/boot/uboot-rockchip/compile -j"$(nproc)" V=s
+
+          UBOOT_CONFIG="$(find build_dir \
+            -type f \
+            -path '*/u-boot-nanopi-r76s-rk3576/u-boot-2026.07/.config' \
+            | head -n 1)"
+
+          if [ -z "$UBOOT_CONFIG" ]; then
+            echo "ERROR: NanoPi R76S U-Boot config was not found"
+            exit 1
+          fi
+
+          echo "===== R76S U-BOOT CONFIG ====="
+          echo "$UBOOT_CONFIG"
+
+          grep \
+            'CONFIG_DEFAULT_DEVICE_TREE=' \
+            "$UBOOT_CONFIG"
+
+          grep \
+            'CONFIG_DEFAULT_FDT_FILE=' \
+            "$UBOOT_CONFIG"
+
+          grep -q \
+            'CONFIG_DEFAULT_DEVICE_TREE="rockchip/rk3576-nanopi-r76s"' \
+            "$UBOOT_CONFIG"
+
+          grep -q \
+            'CONFIG_DEFAULT_FDT_FILE="rockchip/rk3576-nanopi-r76s.dtb"' \
+            "$UBOOT_CONFIG"
+
+          echo "R76S board-specific U-Boot build PASSED"
 
       - name: Prepare and verify patched r8125
         working-directory: openwrt
