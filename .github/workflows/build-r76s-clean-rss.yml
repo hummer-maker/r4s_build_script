@@ -300,6 +300,28 @@ jobs:
 
           echo "Pre-flight target check PASSED"
 
+      - name: Prepare OpenWrt build tools
+        working-directory: openwrt
+        run: |
+          echo "===== BUILD HOST TOOLS ====="
+          make tools/install -j"$(nproc)"
+
+          echo "===== BUILD TOOLCHAIN ====="
+          make toolchain/install -j"$(nproc)"
+
+          echo "===== VERIFY HOST TOOLS ====="
+          test -x staging_dir/host/bin/openssl || {
+            echo "ERROR: OpenWrt host openssl is missing"
+            exit 1
+          }
+
+          test -x staging_dir/host/bin/libdeflate-gzip || {
+            echo "ERROR: OpenWrt host libdeflate-gzip is missing"
+            exit 1
+          }
+
+          echo "OpenWrt build tools PASSED"
+
       - name: Build and verify R76S U-Boot
         working-directory: openwrt
         run: |
